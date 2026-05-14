@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI访谈员</title>
+  <style>
+    /* ===== 设计系统：5色限制 =====
+     * 主色 Blue:    #2563eb (按钮、强调、选中态)
+     * 背景 White:   #ffffff (卡片、页面背景)
+     * 背景 Gray:    #f8fafc (输入框、次级背景)
+     * 文字 Black:   #1e293b (标题、正文)
+     * 文字 Gray:    #64748b (次要文字、描述)
+     * ================================= */
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      color: #1e293b;
+      background: #ffffff;
+      line-height: 1.6;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+    a { text-decoration: none; color: inherit; }
+
+    /* ===== Main Container ===== */
+    .main-container {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    /* ===== Header ===== */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 40px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .header-left {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .header-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #1e293b;
+    }
+    .header-stats {
+      font-size: 13px;
+      color: #64748b;
+    }
+    .header-stats span {
+      color: #2563eb;
+      font-weight: 600;
+    }
+    .header-logo {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: #2563eb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 16px;
+    }
+
+    /* ===== Tab Navigation ===== */
+    .tab-nav {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 20px;
+    }
+    .tab-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #64748b;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tab-item:hover {
+      color: #1e293b;
+      background: #f8fafc;
+    }
+    .tab-item.active {
+      color: #fff;
+      background: #2563eb;
+    }
+    .tab-num {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      background: #e2e8f0;
+      color: #64748b;
+      font-size: 10px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .tab-item.active .tab-num {
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+    }
+
+    /* ===== Workflow Section (Collapsible) ===== */
+    .workflow-section {
+      padding: 0 40px 20px;
+    }
+    .workflow-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .workflow-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .workflow-toggle {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .workflow-toggle:hover {
+      background: #e2e8f0;
+    }
+    .workflow-toggle svg {
+      width: 14px;
+      height: 14px;
+      color: #64748b;
+      transition: transform 0.2s;
+    }
+    .workflow-section.collapsed .workflow-toggle svg {
+      transform: rotate(-90deg);
+    }
+    .workflow-content {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+    .workflow-section.collapsed .workflow-content {
+      max-height: 0;
+      opacity: 0;
+      margin-top: 0;
+    }
+    .workflow-section.expanded .workflow-content {
+      max-height: 160px;
+      opacity: 1;
+    }
+    .workflow-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 16px;
+      transition: all 0.2s;
+    }
+    .workflow-card:hover {
+      border-color: #2563eb;
+    }
+    .workflow-card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .workflow-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+    }
+    .workflow-card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .workflow-card-desc {
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.5;
+    }
+
+    /* ===== Chat Section ===== */
+    .chat-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 0 40px;
+    }
+    .chat-container {
+      flex: 1;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 360px;
+    }
+    .chat-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .chat-body::-webkit-scrollbar { width: 4px; }
+    .chat-body::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 4px; }
+
+    /* Messages */
+    .msg {
+      display: flex;
+      gap: 12px;
+      max-width: 85%;
+      animation: msgIn 0.3s ease;
+    }
+    @keyframes msgIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .msg.ai { align-self: flex-start; }
+    .msg.user { align-self: flex-end; flex-direction: row-reverse; }
+    .msg-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      background: #2563eb;
+      color: #fff;
+    }
+    .msg.user .msg-avatar {
+      background: #e2e8f0;
+      color: #64748b;
+    }
+    .msg-bubble {
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      line-height: 1.6;
+      background: #f8fafc;
+      color: #1e293b;
+      border: 1px solid #e2e8f0;
+    }
+    .msg.user .msg-bubble {
+      background: #2563eb;
+      color: #fff;
+      border-color: #2563eb;
+    }
+    .msg-bubble strong {
+      color: #2563eb;
+      font-weight: 600;
+    }
+    .msg.user .msg-bubble strong {
+      color: #fff;
+    }
+
+    /* Typing indicator */
+    .typing-indicator {
+      display: flex;
+      gap: 12px;
+      align-self: flex-start;
+      animation: msgIn 0.3s ease;
+    }
+    .typing-dots {
+      display: flex;
+      gap: 4px;
+      padding: 14px 18px;
+      background: #f8fafc;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+    }
+    .typing-dots span {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #2563eb;
+      animation: typingBounce 1.4s infinite;
+    }
+    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typingBounce {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+      30% { transform: translateY(-4px); opacity: 1; }
+    }
+
+    /* Chat Input Area */
+    .chat-input-area {
+      padding: 16px 20px;
+      border-top: 1px solid #e2e8f0;
+      background: #fff;
+    }
+    .chat-input-wrap {
+      display: flex;
+      align-items: flex-end;
+      gap: 12px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 10px 12px 10px 16px;
+      transition: all 0.2s;
+    }
+    .chat-input-wrap:focus-within {
+      border-color: #2563eb;
+      background: #fff;
+    }
+    .chat-input-wrap textarea {
+      flex: 1;
+      border: none;
+      background: transparent;
+      font-size: 14px;
+      font-family: inherit;
+      color: #1e293b;
+      resize: none;
+      outline: none;
+      line-height: 1.5;
+      min-height: 20px;
+      max-height: 100px;
+      padding: 4px 0;
+    }
+    .chat-input-wrap textarea::placeholder { color: #94a3b8; }
+    .chat-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .chat-action-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .chat-action-btn:hover {
+      color: #64748b;
+      background: #e2e8f0;
+    }
+    .char-count {
+      font-size: 12px;
+      color: #94a3b8;
+    }
+    .send-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      background: #2563eb;
+      border: none;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .send-btn:hover:not(:disabled) {
+      background: #1d4ed8;
+    }
+    .send-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .send-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* ===== Case Bubbles (above input) ===== */
+    .case-section {
+      padding: 12px 20px 0;
+    }
+    .case-label {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-bottom: 8px;
+    }
+    .case-bubbles {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .case-bubble {
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      color: #64748b;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .case-bubble:hover {
+      border-color: #2563eb;
+      color: #2563eb;
+    }
+    .case-bubble.active {
+      background: #2563eb;
+      border-color: #2563eb;
+      color: #fff;
+    }
+    .case-bubble .icon {
+      font-size: 12px;
+    }
+
+    /* ===== Result Section ===== */
+    .result-section {
+      padding: 24px 40px 60px;
+      display: none;
+    }
+    .result-section.show { display: block; }
+    .result-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 24px;
+      animation: fadeUp 0.4s ease;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .result-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .result-header h2 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .result-actions { display: flex; gap: 8px; }
+    .btn-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      color: #64748b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 14px;
+    }
+    .btn-icon:hover {
+      background: #2563eb;
+      border-color: #2563eb;
+      color: #fff;
+    }
+    .outline-content {
+      line-height: 1.7;
+      color: #475569;
+    }
+    .outline-content h3 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1e293b;
+      margin: 20px 0 8px;
+      padding-left: 10px;
+      border-left: 2px solid #2563eb;
+    }
+    .outline-content h3:first-child { margin-top: 0; }
+    .outline-content ul { padding-left: 20px; }
+    .outline-content li {
+      font-size: 13px;
+      color: #64748b;
+      margin-bottom: 4px;
+    }
+    .outline-content li::marker { color: #2563eb; }
+    .outline-content strong { color: #1e293b; }
+
+    /* ===== Toast ===== */
+    .toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 200;
+      padding: 12px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      background: #1e293b;
+      color: #fff;
+      transform: translateX(120%);
+      transition: transform 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .toast.show { transform: translateX(0); }
+    .toast.success { border-left: 3px solid #22c55e; }
+    .toast.error { border-left: 3px solid #ef4444; }
+
+    /* ===== Responsive ===== */
+    @media (max-width: 768px) {
+      .header { padding: 16px 20px; }
+      .header-title { font-size: 18px; }
+      .tab-nav { padding: 10px 16px; }
+      .tab-item { padding: 6px 12px; font-size: 12px; }
+      .workflow-section { padding: 0 20px 16px; }
+      .workflow-content { grid-template-columns: 1fr; }
+      .chat-section { padding: 0 20px; }
+      .chat-body { padding: 16px; }
+      .result-section { padding: 20px; }
+      .result-card { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="main-container">
+
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <h1 class="header-title">AI访谈员</h1>
+        <p class="header-stats">已帮助 <span>2,000+</span> 团队完成超 <span>1亿</span> 次用户访谈 · 平均执行周期缩短 <span>80%</span></p>
+      </div>
+      <div class="header-logo">🤖</div>
+    </header>
+
+    <!-- Tab Navigation -->
+    <nav class="tab-nav">
+      <button class="tab-item active" data-tab="outline">
+        <span class="tab-num">1</span>
+        <span>生成访谈提纲</span>
+      </button>
+      <button class="tab-item" data-tab="customize">
+        <span class="tab-num">2</span>
+        <span>定制AI访谈员</span>
+      </button>
+      <button class="tab-item" data-tab="analyze">
+        <span class="tab-num">3</span>
+        <span>分析回收结果</span>
+      </button>
+    </nav>
+
+    <!-- Workflow Section (Collapsible) -->
+    <section class="workflow-section expanded" id="workflowSection">
+      <div class="workflow-header">
+        <span class="workflow-label">用研工作流</span>
+        <button class="workflow-toggle" onclick="toggleWorkflow()" title="收起/展开">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
+      </div>
+      <div class="workflow-content">
+        <div class="workflow-card">
+          <div class="workflow-card-header">
+            <div class="workflow-icon">📋</div>
+            <span class="workflow-card-title">10秒生成提纲</span>
+          </div>
+          <p class="workflow-card-desc">输入调研目的，自动产出专业访谈问题</p>
+        </div>
+        <div class="workflow-card">
+          <div class="workflow-card-header">
+            <div class="workflow-icon">🤖</div>
+            <span class="workflow-card-title">AI 自动主持</span>
+          </div>
+          <p class="workflow-card-desc">无需人工跟访，AI 追问、记录全流程</p>
+        </div>
+        <div class="workflow-card">
+          <div class="workflow-card-header">
+            <div class="workflow-icon">📊</div>
+            <span class="workflow-card-title">自动归纳洞察</span>
+          </div>
+          <p class="workflow-card-desc">回收完成后，一键获取核心结论与摘要</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Chat Section -->
+    <section class="chat-section">
+      <div class="chat-container">
+        <div class="chat-body" id="chatBody">
+          <!-- Messages will be injected here -->
+        </div>
+        <!-- Case Bubbles (above input) -->
+        <div class="case-section">
+          <p class="case-label">你可以尝试这些场景：</p>
+          <div class="case-bubbles">
+            <button class="case-bubble active" onclick="selectCase(this, '🎁 用户体验有奖调研')">
+              <span class="icon">🎁</span>
+              <span>用户体验有奖调研</span>
+            </button>
+            <button class="case-bubble" onclick="selectCase(this, '托福助手功能调研')">
+              <span>托福助手功能调研</span>
+            </button>
+            <button class="case-bubble" onclick="selectCase(this, '女性饮食 APP 调研')">
+              <span>女性饮食 APP 调研</span>
+            </button>
+            <button class="case-bubble" onclick="selectCase(this, '高考 AI 搜题调研')">
+              <span>高考 AI 搜题调研</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="chat-input-area">
+          <div class="chat-input-wrap">
+            <textarea id="chatInput" placeholder="请输入调研目的、人群等信息，让我更了解你的调研详情" rows="1"></textarea>
+            <div class="chat-actions">
+              <button class="chat-action-btn" title="@提及">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94"/></svg>
+              </button>
+              <button class="chat-action-btn" title="附件">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+              </button>
+              <span class="char-count" id="charCount">0 / 500</span>
+              <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13"/>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Result Section -->
+    <div class="result-section" id="resultSection">
+      <div class="result-card">
+        <div class="result-header">
+          <h2>📋 生成的访谈提纲</h2>
+          <div class="result-actions">
+            <button class="btn-icon" title="复制" onclick="copyResult()">📋</button>
+            <button class="btn-icon" title="收起" onclick="toggleResult()">▼</button>
+          </div>
+        </div>
+        <div class="outline-content" id="outlineContent"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ===== Workflow Collapse =====
+    function toggleWorkflow() {
+      const section = document.getElementById('workflowSection');
+      section.classList.toggle('collapsed');
+      section.classList.toggle('expanded');
+    }
+
+    // ===== Tab Switching =====
+    document.querySelectorAll('.tab-item').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+      });
+    });
+
+    // ===== Case Selection =====
+    function selectCase(btn, text) {
+      document.querySelectorAll('.case-bubble').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('chatInput').value = text;
+      document.getElementById('chatInput').focus();
+      updateCharCount();
+    }
+
+    // ===== Chat State =====
+    const questions = [
+      { key: 'combined', text: '你好！我是你的AI研究员 🎯\n\n首先，请简要描述一下你的**调研背景、目标人群、研究目的**：\n例如：正在开发一款健康管理 App，想了解30-40岁白领用户的行为习惯和健康管理方面的痛点。' },
+      { key: 'extra', text: '还有其他需要补充的信息吗？（可选，直接发送「没有了」或「跳过」即可）\n例如：重点关注运动追踪和饮食记录的使用体验，或希望了解竞品使用情况等。' }
+    ];
+
+    let currentStep = 0;
+    const answers = {};
+
+    // ===== Init: show first question =====
+    window.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => addAIMessage(questions[0].text), 400);
+    });
+
+    // ===== Auto-resize textarea & char count =====
+    const chatInput = document.getElementById('chatInput');
+    chatInput.addEventListener('input', () => {
+      chatInput.style.height = 'auto';
+      chatInput.style.height = Math.min(chatInput.scrollHeight, 100) + 'px';
+      updateCharCount();
+    });
+    chatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    function updateCharCount() {
+      const count = chatInput.value.length;
+      document.getElementById('charCount').textContent = `${count} / 500`;
+    }
+
+    // ===== Send Message =====
+    function sendMessage() {
+      const text = chatInput.value.trim();
+      if (!text) return;
+
+      const sendBtn = document.getElementById('sendBtn');
+      sendBtn.disabled = true;
+
+      // Add user message
+      addUserMessage(text);
+
+      // Store answer
+      answers[questions[currentStep].key] = text;
+      chatInput.value = '';
+      chatInput.style.height = 'auto';
+      updateCharCount();
+
+      currentStep++;
+
+      if (currentStep < questions.length) {
+        showTyping();
+        setTimeout(() => {
+          removeTyping();
+          addAIMessage(questions[currentStep].text);
+          sendBtn.disabled = false;
+          chatInput.focus();
+        }, 800 + Math.random() * 600);
+      } else {
+        showTyping();
+        setTimeout(() => {
+          removeTyping();
+          addAIMessage('✅ 信息收集完毕！正在为你生成访谈提纲...');
+          chatInput.disabled = true;
+          sendBtn.disabled = true;
+
+          setTimeout(() => {
+            generateOutline();
+            showToast('访谈提纲生成成功！', 'success');
+          }, 600);
+        }, 1200);
+      }
+    }
+
+    // ===== Message Helpers =====
+    function addAIMessage(text) {
+      const chatBody = document.getElementById('chatBody');
+      const div = document.createElement('div');
+      div.className = 'msg ai';
+      div.innerHTML = `
+        <div class="msg-avatar">🤖</div>
+        <div class="msg-bubble">${text.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</div>
+      `;
+      chatBody.appendChild(div);
+      chatBody.scrollTop = chatBody.scrollHeight;
+    }
+
+    function addUserMessage(text) {
+      const chatBody = document.getElementById('chatBody');
+      const div = document.createElement('div');
+      div.className = 'msg user';
+      div.innerHTML = `
+        <div class="msg-avatar">👤</div>
+        <div class="msg-bubble">${text.replace(/\n/g, '<br>')}</div>
+      `;
+      chatBody.appendChild(div);
+      chatBody.scrollTop = chatBody.scrollHeight;
+    }
+
+    function showTyping() {
+      const chatBody = document.getElementById('chatBody');
+      const div = document.createElement('div');
+      div.className = 'typing-indicator';
+      div.id = 'typingIndicator';
+      div.innerHTML = `
+        <div class="msg-avatar">🤖</div>
+        <div class="typing-dots"><span></span><span></span><span></span></div>
+      `;
+      chatBody.appendChild(div);
+      chatBody.scrollTop = chatBody.scrollHeight;
+    }
+
+    function removeTyping() {
+      const el = document.getElementById('typingIndicator');
+      if (el) el.remove();
+    }
+
+    // ===== Generate Outline =====
+    function generateOutline() {
+      const combined = answers.combined || '';
+      const extra = answers.extra || '';
+
+      const html = `
+        <h3>一、调研概述</h3>
+        <ul>
+          <li><strong>调研需求：</strong>${combined}</li>
+          ${extra && extra !== '没有了' && extra !== '跳过' ? `<li><strong>补充说明：</strong>${extra}</li>` : ''}
+        </ul>
+
+        <h3>二、开场与破冰（约 3-5 分钟）</h3>
+        <ul>
+          <li>感谢您参加本次访谈，我是 [访谈员姓名]，今天大约需要 45 分钟。</li>
+          <li>本次访谈的目的是了解您在相关领域的真实体验和想法，没有对错之分。</li>
+          <li>访谈过程会被记录，仅用于内部研究，您的个人信息将严格保密。</li>
+          <li>请问您能简单介绍一下自己吗？（职业、年龄、日常兴趣等）</li>
+        </ul>
+
+        <h3>三、核心访谈问题</h3>
+        <ul>
+          <li><strong>行为探索：</strong>您目前在 [相关领域] 中有哪些习惯或做法？能描述一下典型的一天/一周吗？</li>
+          <li><strong>痛点挖掘：</strong>在这个过程中，您遇到过哪些困难或不满意的地方？能具体讲讲最近一次经历吗？</li>
+          <li><strong>需求理解：</strong>如果有一个产品/服务能帮您解决这个问题，您希望它能做到什么？</li>
+          <li><strong>现有方案：</strong>您目前是如何应对这些问题的？使用了哪些工具或方法？</li>
+          <li><strong>决策因素：</strong>在选择类似产品/服务时，您最看重哪些方面？为什么？</li>
+        </ul>
+
+        <h3>四、深度追问方向</h3>
+        <ul>
+          <li>「您刚才提到 XXX，能再多说一些吗？」—— 深入了解具体场景</li>
+          <li>「当时您是怎么想的/怎么做的？」—— 还原决策过程</li>
+          <li>「这个问题对您的影响有多大？」—— 评估痛点优先级</li>
+          <li>「您理想中的体验是什么样的？」—— 探索期望与需求</li>
+        </ul>
+
+        <h3>五、场景任务（如适用）</h3>
+        <ul>
+          <li>请展示您平时是如何完成 [具体任务] 的，边操作边说出您的想法。</li>
+          <li>（观察用户操作流程、犹豫点、困惑点并记录）</li>
+        </ul>
+
+        <h3>六、结束与收尾（约 3-5 分钟）</h3>
+        <ul>
+          <li>今天还有其他想分享的吗？有没有我们没问到但您觉得很重要的事情？</li>
+          <li>如果未来我们想进一步了解，您是否愿意再次参与？</li>
+          <li>非常感谢您的时间和分享，对本次访谈非常有帮助！</li>
+        </ul>
+
+        <h3>七、访谈员注意事项</h3>
+        <ul>
+          <li>保持中立，避免引导性提问（如「您是不是觉得…不好？」）</li>
+          <li>多使用开放式问题（「是什么」「为什么」「怎么样」）</li>
+          <li>注意用户的非语言信号（表情、停顿、语气变化）</li>
+          <li>及时记录关键引用（原话），便于后续分析</li>
+      <li>控制时间节奏，确保核心问题都有覆盖</li>
+        </ul>
+      `;
+
+      document.getElementById('outlineContent').innerHTML = html;
+      const section = document.getElementById('resultSection');
+      section.classList.add('show');
+      setTimeout(() => section.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
+    }
+
+    // ===== Copy & Toggle =====
+    function copyResult() {
+      const content = document.getElementById('outlineContent').innerText;
+      navigator.clipboard.writeText(content).then(() => {
+        showToast('提纲已复制到剪贴板', 'success');
+      }).catch(() => {
+        showToast('复制失败，请手动选择复制', 'error');
+      });
+    }
+
+    function toggleResult() {
+      const content = document.getElementById('outlineContent');
+      const btn = event.currentTarget;
+      if (content.style.display === 'none') {
+        content.style.display = 'block';
+        btn.innerHTML = '▼';
+      } else {
+        content.style.display = 'none';
+        btn.innerHTML = '▲';
+      }
+    }
+
+    // ===== Toast =====
+    function showToast(msg, type = 'success') {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.className = 'toast ' + type;
+      requestAnimationFrame(() => toast.classList.add('show'));
+      setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+  </script>
+
+</body>
+</html>
